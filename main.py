@@ -233,6 +233,22 @@ def _etiqueta_mensaje(tipo: str) -> str:
 # Streamlit UI
 def main():
     st.set_page_config(page_title="IA", layout="wide")
+    st.markdown(
+        """
+        <style>
+        /* Pastillas del multiselect: texto oscuro sobre primaryColor claro */
+        div[data-testid="stMultiSelect"] [data-baseweb="tag"],
+        div[data-testid="stMultiSelect"] [data-baseweb="tag"] span {
+            color: #000000 !important;
+        }
+        div[data-testid="stMultiSelect"] [data-baseweb="tag"] svg,
+        div[data-testid="stMultiSelect"] [data-baseweb="tag"] path {
+            fill: #000000 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.title("AI Coach Fitness and Nutrition")
     st.caption("Crea y personaliza tu plan de entrenamiento con IA, utilizando la documentacion cientifica para crear los mejores planes de entrenamiento.")
 
