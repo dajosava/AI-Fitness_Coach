@@ -32,115 +32,147 @@ def get_ollama_llm(model_name="tinyllama"):
     print(f"Creating ChatOllama with model: {model_name}")
     return ChatOllama(model=model_name)
 
+# Instrucción común de idioma para uso en Costa Rica (América Latina)
+LOCALE_ES_CR = (
+    "Todas tus respuestas de texto deben estar en español (español de Costa Rica / América Latina). "
+    "Usa tono cercano y respetuoso. Si mencionas alimentos o hábitos, puedes referirte a opciones comunes en la región cuando sea útil."
+)
+
 # User Input Agent
 def user_input_agent(state: State, llm):
     prompt = ChatPromptTemplate.from_template(
-        """You are an AI fitness coach assistant. Process the following user information:
+        """Eres un asistente de entrenador físico con IA. Procesa la siguiente información del usuario:
 
         {user_input}
 
-        Create a structured user profile based on this information. Include all relevant details for creating a personalized fitness plan.
-        Return the profile as a valid JSON string."""
+        {locale}
+
+        Crea un perfil de usuario estructurado con todos los detalles relevantes para armar un plan de entrenamiento personalizado.
+        Devuelve el perfil como una cadena JSON válida. Conserva los nombres de las claves en inglés (age, weight, height, gender, primary_goal, etc.) para compatibilidad con el sistema; los valores descriptivos deben estar en español."""
     )
     chain = prompt | llm | StrOutputParser()
-    user_profile = chain.invoke({"user_input": json.dumps(state["user_data"])})
+    user_profile = chain.invoke({"user_input": json.dumps(state["user_data"]), "locale": LOCALE_ES_CR})
     try:
         state["user_data"] = json.loads(user_profile)
     except json.JSONDecodeError:
         pass
-    state["messages"].append(AIMessage(content=f"Processed user profile: {json.dumps(state['user_data'], indent=2)}"))
+    state["messages"].append(AIMessage(content=f"Perfil de usuario procesado: {json.dumps(state['user_data'], indent=2, ensure_ascii=False)}"))
     return state
 # routine generation agent
 def routine_generation_agent(state: State, llm):
     prompt = ChatPromptTemplate.from_template(
-        """You are an AI fitness coach. Create a personalized fitness routine based on the following user data:
+        """Eres un entrenador físico con IA. Crea una rutina de ejercicio personalizada según estos datos del usuario:
 
         {user_data}
 
-        Create a detailed weekly fitness plan that includes:
-        1. Types of exercises
-        2. Duration and frequency of workouts
-        3. Intensity levels
-        4. Rest days
-        5. Any dietary recommendations
+        {locale}
 
-        Present the plan in a clear, structured format."""
+        Incluye un plan semanal detallado con:
+        1. Tipos de ejercicios (nombres claros; si algo no es común en gimnasios caseros, indícalo)
+        2. Duración y frecuencia de las sesiones
+        3. Niveles de intensidad
+        4. Días de descanso
+        5. Recomendaciones alimentarias generales y prudentes (no sustituyen consejo médico)
+
+        Presenta el plan de forma clara y estructurada, en español."""
     )
     chain = prompt | llm | StrOutputParser()
-    plan = chain.invoke({"user_data": json.dumps(state["user_data"])})
+    plan = chain.invoke({"user_data": json.dumps(state["user_data"], ensure_ascii=False), "locale": LOCALE_ES_CR})
     state["fitness_plan"] = plan
-    state["messages"].append(AIMessage(content=f"Generated fitness plan: {plan}"))
+    state["messages"].append(AIMessage(content=f"Plan de entrenamiento generado: {plan}"))
     return state
 
 # Feedback Collection Agent
 def feedback_collection_agent(state: State, llm):
     prompt = ChatPromptTemplate.from_template(
-        """You are an AI fitness coach assistant. Analyze the following user feedback on their recent workout session:
+        """Eres un asistente de entrenador físico con IA. Analiza la retroalimentación del usuario sobre su sesión o plan reciente:
 
-        Current fitness plan: {current_plan}
-        User feedback: {user_feedback}
+        Plan de entrenamiento actual: {current_plan}
+        Comentarios del usuario: {user_feedback}
 
-        Summarize the user's feedback and suggest any immediate adjustments."""
+        {locale}
+
+        Resume lo que expresa el usuario y sugiere ajustes inmediatos posibles, en español."""
     )
     chain = prompt | llm | StrOutputParser()
-    feedback_summary = chain.invoke({"current_plan": state["fitness_plan"], "user_feedback": state["feedback"]})
-    state["messages"].append(AIMessage(content=f"Feedback analysis: {feedback_summary}"))
+    feedback_summary = chain.invoke(
+        {"current_plan": state["fitness_plan"], "user_feedback": state["feedback"], "locale": LOCALE_ES_CR}
+    )
+    state["messages"].append(AIMessage(content=f"Análisis de retroalimentación: {feedback_summary}"))
     return state
 
 # Routine Adjustment Agent
 def routine_adjustment_agent(state: State, llm):
     prompt = ChatPromptTemplate.from_template(
-        """You are an AI fitness coach. Adjust the current fitness plan based on the user's feedback:
+        """Eres un entrenador físico con IA. Ajusta el plan de entrenamiento actual según la retroalimentación del usuario:
 
-        Current Plan:
+        Plan actual:
         {current_plan}
 
-        User Feedback:
+        Retroalimentación del usuario:
         {feedback}
 
-        Provide an updated weekly fitness plan that addresses the user's feedback while maintaining the overall structure and goals."""
+        {locale}
+
+        Entrega un plan semanal actualizado que atienda los comentarios del usuario y mantenga la estructura y los objetivos generales. Todo en español."""
     )
     chain = prompt | llm | StrOutputParser()
-    updated_plan = chain.invoke({"current_plan": state["fitness_plan"], "feedback": state["feedback"]})
+    updated_plan = chain.invoke(
+        {"current_plan": state["fitness_plan"], "feedback": state["feedback"], "locale": LOCALE_ES_CR}
+    )
     state["fitness_plan"] = updated_plan
-    state["messages"].append(AIMessage(content=f"Updated fitness plan: {updated_plan}"))
+    state["messages"].append(AIMessage(content=f"Plan de entrenamiento actualizado: {updated_plan}"))
     return state
 
 # Progress Monitoring Agent
 def progress_monitoring_agent(state: State, llm):
     prompt = ChatPromptTemplate.from_template(
-        """You are an AI fitness progress tracker. Review the user's progress and provide encouragement or suggestions:
+        """Eres un seguimiento de progreso físico con IA. Revisa el avance del usuario y ofrece ánimo o sugerencias:
 
-        User Data: {user_data}
-        Current Plan: {current_plan}
-        Progress History: {progress_history}
+        Datos del usuario: {user_data}
+        Plan actual: {current_plan}
+        Historial de progreso: {progress_history}
 
-        Provide a summary of the user's progress, offer encouragement, and suggest any new challenges or adjustments."""
+        {locale}
+
+        Resume el progreso, da ánimo y sugiere retos o ajustes nuevos si aplica. Todo en español."""
     )
     chain = prompt | llm | StrOutputParser()
     progress_update = chain.invoke(
-        {"user_data": str(state["user_data"]), "current_plan": state["fitness_plan"], "progress_history": str(state["progress"])}
+        {
+            "user_data": str(state["user_data"]),
+            "current_plan": state["fitness_plan"],
+            "progress_history": str(state["progress"]),
+            "locale": LOCALE_ES_CR,
+        }
     )
     state["progress"].append(progress_update)
-    state["messages"].append(AIMessage(content=f"Progress update: {progress_update}"))
+    state["messages"].append(AIMessage(content=f"Actualización de progreso: {progress_update}"))
     return state
 
 # Motivational Agent
 def motivational_agent(state: State, llm):
     prompt = ChatPromptTemplate.from_template(
-        """You are an AI motivational coach for fitness. Provide encouragement, tips, or reminders to the user:
+        """Eres un coach motivacional de fitness con IA. Ofrece ánimo, consejos prácticos o recordatorios al usuario:
 
-        User Data: {user_data}
-        Current Plan: {current_plan}
-        Recent Progress: {recent_progress}
+        Datos del usuario: {user_data}
+        Plan actual: {current_plan}
+        Progreso reciente: {recent_progress}
 
-        Generate a motivational message, helpful tip, or reminder to keep the user engaged and committed to their fitness goals."""
+        {locale}
+
+        Genera un mensaje motivacional breve, un consejo útil o un recordatorio para mantener el compromiso con sus metas. En español."""
     )
     chain = prompt | llm | StrOutputParser()
     motivation = chain.invoke(
-        {"user_data": str(state["user_data"]), "current_plan": state["fitness_plan"], "recent_progress": state["progress"][-1] if state["progress"] else ""}
+        {
+            "user_data": str(state["user_data"]),
+            "current_plan": state["fitness_plan"],
+            "recent_progress": state["progress"][-1] if state["progress"] else "",
+            "locale": LOCALE_ES_CR,
+        }
     )
-    state["messages"].append(AIMessage(content=f"Motivation: {motivation}"))
+    state["messages"].append(AIMessage(content=f"Motivación: {motivation}"))
     return state
 
 # AIFitnessCoach class
@@ -190,66 +222,75 @@ class AIFitnessCoach:
         print(f"Final state: {final_state}")
         return final_state["messages"]
 
+def _etiqueta_mensaje(tipo: str) -> str:
+    if tipo == "human":
+        return "Usuario"
+    if tipo == "ai":
+        return "Asistente"
+    return tipo.capitalize()
+
+
 # Streamlit UI
 def main():
-    st.set_page_config(page_title="AI Fitness Coach", layout="wide")
-    st.title("AI Fitness Coach")
+    st.set_page_config(page_title="IA", layout="wide")
+    st.title("AI Coach Fitness and Nutrition")
+    st.caption("Crea y personaliza tu plan de entrenamiento con IA, utilizando la documentacion cientifica para crear los mejores planes de entrenamiento.")
 
     # Initialize session state
     if "fitness_coach" not in st.session_state:
         st.session_state.fitness_coach = AIFitnessCoach()
 
-    tab1, tab2 = st.tabs(["Create Fitness Plan", "Update Fitness Plan"])
+    tab1, tab2 = st.tabs(["Crear plan de entrenamiento", "Actualizar plan"])
 
     with tab1:
-        st.header("Create Your Personalized Fitness Plan")
+        st.header("Crea tu plan de entrenamiento personalizado")
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            age = st.number_input("Age", min_value=1, max_value=120)
+            age = st.number_input("Edad", min_value=1, max_value=120)
         with col2:
-            weight = st.number_input("Weight (kg)", min_value=1.0)
+            weight = st.number_input("Peso (kg)", min_value=1.0)
         with col3:
-            height = st.number_input("Height (cm)", min_value=1.0)
+            height = st.number_input("Estatura (cm)", min_value=1.0)
         
-        gender = st.radio("Gender", ["Male", "Female", "Other"])
+        gender = st.radio("Género", ["Masculino", "Femenino", "Otro"])
         
         primary_goal = st.selectbox(
-            "Primary Goal",
-            ["Weight loss", "Muscle gain", "Endurance improvement", "General fitness"]
+            "Objetivo principal",
+            ["Pérdida de peso", "Ganancia muscular", "Mejorar resistencia", "Condición física general"]
         )
         
         target_timeframe = st.selectbox(
-            "Target Timeframe",
-            ["3 months", "6 months", "1 year"]
+            "Plazo objetivo",
+            ["3 meses", "6 meses", "1 año"]
         )
         
         workout_preferences = st.multiselect(
-            "Workout Type Preferences",
-            ["Cardio", "Strength training", "Yoga", "Pilates", "Flexibility exercises", "HIIT"]
+            "Tipos de entrenamiento preferidos",
+            ["Cardio", "Fuerza / musculación", "Yoga", "Pilates", "Flexibilidad", "HIIT"]
         )
         
         workout_duration = st.slider(
-            "Preferred Workout Duration (minutes)",
+            "Duración preferida por sesión (minutos)",
             min_value=15,
             max_value=120,
             step=15
         )
         
         workout_days = st.multiselect(
-            "Preferred Workout Days",
-            ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            "Días preferidos para entrenar",
+            ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
         )
         
         activity_level = st.radio(
-            "Current Activity Level",
-            ["Sedentary", "Lightly active", "Moderately active", "Highly active"]
+            "Nivel de actividad actual",
+            ["Sedentario", "Ligeramente activo", "Moderadamente activo", "Muy activo"]
         )
         
-        health_conditions = st.text_area("Health Conditions or Injuries")
-        dietary_preferences = st.text_area("Dietary Preferences (Optional)")
+        health_conditions = st.text_area("Condiciones de salud o lesiones")
+        dietary_preferences = st.text_area("Preferencias alimentarias (opcional)")
         
-        if st.button("Create Fitness Plan"):
+        if st.button("Generar plan de entrenamiento"):
             user_data = {
                 "age": age,
                 "weight": weight,
@@ -265,23 +306,23 @@ def main():
                 "dietary_preferences": dietary_preferences
             }
             
-            with st.spinner("Generating your personalized fitness plan..."):
+            with st.spinner("Generando tu plan personalizado..."):
                 messages = st.session_state.fitness_coach.run(user_data)
                 st.session_state.last_plan = messages
                 
             for message in messages:
-                st.write(f"**{message.type.capitalize()}:** {message.content}")
+                st.write(f"**{_etiqueta_mensaje(message.type)}:** {message.content}")
 
     with tab2:
-        st.header("Update Your Fitness Plan")
-        feedback = st.text_area("Provide feedback about your current plan:")
+        st.header("Actualizar tu plan de entrenamiento")
+        feedback = st.text_area("Comentarios sobre tu plan actual:")
         
-        if st.button("Update Plan"):
-            with st.spinner("Updating your fitness plan..."):
+        if st.button("Actualizar plan"):
+            with st.spinner("Actualizando tu plan..."):
                 messages = st.session_state.fitness_coach.run({"feedback": feedback})
                 
             for message in messages:
-                st.write(f"**{message.type.capitalize()}:** {message.content}")
+                st.write(f"**{_etiqueta_mensaje(message.type)}:** {message.content}")
 
 if __name__ == "__main__":
     main()

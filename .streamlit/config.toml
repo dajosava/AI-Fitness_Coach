@@ -1,0 +1,8 @@
+# Tema de la app: acentos (pestañas, slider, radios, chips del multiselect) = amarillo fosforescente
+[theme]
+base = "dark"
+primaryColor = "#E8FF00"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+font = "sans serif"
