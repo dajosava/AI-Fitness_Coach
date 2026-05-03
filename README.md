@@ -2,6 +2,8 @@
 
 This project implements an AI-powered Fitness Coach that creates personalized fitness plans using Large Language Models (LLMs). It leverages the LangChain and LangGraph frameworks to create a multi-agent system that interacts with users, generates fitness plans, and provides ongoing support and motivation.
 
+For architecture, how the code fits together, how to change it, and archival notes (Spanish), see **[proyecto.md](proyecto.md)**.
+
 ## Features
 
 - User profile creation based on input data
@@ -90,6 +92,7 @@ If you override the start command in the Railway UI, use the same arguments as i
 - `Procfile`: process definition for Railway (Streamlit + `PORT`).
 - `runtime.txt`: Python version for the build image.
 - `.streamlit/config.toml`: Streamlit theme (optional UI styling).
+- `proyecto.md`: Spanish project reference (behavior, internals, modification, archiving).
 
 ## Choosing Between OpenAI and Ollama
 
